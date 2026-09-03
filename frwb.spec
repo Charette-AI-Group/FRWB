@@ -15,9 +15,24 @@ lives under APPDATA and is created on first run - see appConfig's settings
 file and undo log.
 """
 
+import sys
 from pathlib import Path
 
 projectRoot = Path(SPECPATH)
+isMac = sys.platform == "darwin"
+
+# The one place the version comes from, here as everywhere else. appConfig
+# imports nothing but the standard library, so reading it costs nothing and
+# a bundle can never claim a version the application does not report.
+sys.path.insert(0, str(projectRoot / "src"))
+from frwb import appConfig  # noqa: E402
+
+# PyInstaller wants the platform's own icon format. Windows takes the
+# multi-size .ico; macOS takes .icns, which PyInstaller renders from this PNG
+# at build time - which is why pillow is in the build extra.
+appIcon = str(
+    projectRoot / "src" / "frwb" / "resources" / ("frwb.png" if isMac else "frwb.ico")
+)
 
 # PyInstaller does not collect package data on its own, and appConfig looks
 # for the icons inside the package. Without this the executable wears the
@@ -73,7 +88,7 @@ executable = EXE(
     [],
     exclude_binaries=True,
     name="FRWB",
-    icon=str(projectRoot / "src" / "frwb" / "resources" / "frwb.ico"),
+    icon=appIcon,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -98,3 +113,21 @@ collected = COLLECT(
     upx_exclude=[],
     name="FRWB",
 )
+
+# macOS wants an application bundle, not a folder of files: a .app is what
+# Finder opens, what the Dock shows, and what a person drags to Applications.
+if isMac:
+    bundle = BUNDLE(
+        collected,
+        name="FRWB.app",
+        icon=appIcon,
+        bundle_identifier="com.charette-ai-group.frwb",
+        info_plist={
+            # Without this the window is drawn at half resolution on a
+            # Retina display and every glyph in it looks soft.
+            "NSHighResolutionCapable": True,
+            "CFBundleShortVersionString": appConfig.appVersion,
+            "CFBundleVersion": appConfig.appVersion,
+            "CFBundleDisplayName": appConfig.appShortName,
+        },
+    )

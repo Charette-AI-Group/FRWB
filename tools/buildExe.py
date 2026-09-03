@@ -20,15 +20,26 @@ from pathlib import Path
 
 projectRoot = Path(__file__).resolve().parents[1]
 specFile = projectRoot / "frwb.spec"
-distDir = projectRoot / "dist" / "FRWB"
-executable = distDir / "FRWB.exe"
-reportFile = projectRoot / "dist" / "selftest.txt"
+outputRoot = projectRoot / "dist"
+isMac = sys.platform == "darwin"
+
+# What PyInstaller leaves behind, which is not the same shape on the two
+# platforms: Windows gets a folder to install, macOS an application bundle.
+if isMac:
+    distDir = outputRoot / "FRWB.app"
+    executable = distDir / "Contents" / "MacOS" / "FRWB"
+else:
+    distDir = outputRoot / "FRWB"
+    executable = distDir / "FRWB.exe"
+
+reportFile = outputRoot / "selftest.txt"
 buildTimeoutSeconds = 1800.0
 selfTestTimeoutSeconds = 180.0
 
-# Everything the application reaches for at runtime, relative to the bundle's
-# _internal folder, which is what sys._MEIPASS points at in a one-folder build
-# and therefore what appConfig.bundleRoot becomes.
+# Everything the application reaches for at runtime, as paths relative to
+# wherever the bundle keeps its data. That location differs by platform and
+# by PyInstaller version, so these are searched for rather than looked up:
+# what matters is that they shipped, not which folder they landed in.
 expectedPayload = [
     Path("frwb/resources/frwb.ico"),
     Path("frwb/resources/check-onDark.ico"),
@@ -78,20 +89,32 @@ def build() -> int:
     return subprocess.run(command, cwd=projectRoot, timeout=buildTimeoutSeconds).returncode
 
 
-def internalDir() -> Path:
-    """Where a one-folder build puts its data. _MEIPASS, at runtime."""
-    candidate = distDir / "_internal"
-    return candidate if candidate.is_dir() else distDir
+def shippedSomewhere(relative: Path) -> bool:
+    """Whether the bundle holds this path under any of its data roots.
+
+    Windows puts data in _internal; a macOS .app splits it between
+    Contents/Frameworks and Contents/Resources, with symlinks between them.
+    Hard-coding either is how this check starts passing for the wrong reason
+    on the other platform.
+    """
+    return any(
+        candidate.exists()
+        for candidate in (
+            distDir / relative,
+            distDir / "_internal" / relative,
+            distDir / "Contents" / "Frameworks" / relative,
+            distDir / "Contents" / "Resources" / relative,
+        )
+    )
 
 
 def checkPayload() -> list[str]:
     problems: list[str] = []
-    internal = internalDir()
     for relative in expectedPayload:
-        if not (internal / relative).exists():
+        if not shippedSomewhere(relative):
             problems.append(f"missing from the bundle: {relative}")
     for relative in refusedPayload:
-        if (internal / relative).exists():
+        if shippedSomewhere(relative):
             problems.append(f"should not have shipped: {relative}")
     return problems
 
@@ -102,7 +125,7 @@ def runSelfTest() -> list[str]:
     try:
         completed = subprocess.run(
             [str(executable), "--selftest", str(reportFile)],
-            cwd=distDir,
+            cwd=outputRoot,
             timeout=selfTestTimeoutSeconds,
         )
     except subprocess.TimeoutExpired:

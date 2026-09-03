@@ -82,7 +82,22 @@ manualUrl = f"{repoUrl}/blob/main/docs/manual/README.md"
 # How long to wait for the published copy before falling back to the local one.
 manualTimeoutSeconds = 3.0
 
-appDataDir = Path(os.environ.get("APPDATA", str(Path.home()))) / appName
+def userDataRoot() -> Path:
+    """Where applications keep their settings, by each platform's convention.
+
+    Qt-free like the rest of this module, so the packaging scripts and the
+    icon generator can read it without paying to import PySide6. Falling back
+    to the home folder on macOS, as this used to, drops a visible folder in
+    the middle of somebody's home directory.
+    """
+    if sys.platform == "win32":
+        return Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support"
+    return Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+
+
+appDataDir = userDataRoot() / appName
 settingsFile = appDataDir / "settings.ini"
 # The last batch of renames, so File > Undo Last Rename can put it back.
 undoLogFile = appDataDir / "lastRename.json"

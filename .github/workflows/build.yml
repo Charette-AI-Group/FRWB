@@ -1,11 +1,23 @@
-# Builds the standalone application and its installer, and publishes them.
+# Builds the standalone application and publishes it.
 #
-# Every push runs the tests and produces both, downloadable from the run's
-# "Artifacts" section. Pushing a version tag additionally publishes a GitHub
-# Release with them attached, because release assets never expire and workflow
-# artifacts do:
+# Every push runs the tests on both platforms and builds both, downloadable
+# from the run's "Artifacts" section. Pushing a version tag additionally
+# publishes a GitHub Release with them attached, because release assets never
+# expire and workflow artifacts do:
 #
 #     git tag -a v0.9.0 -m "..." && git push origin v0.9.0
+#
+# What each platform produces, and why they differ:
+#
+#   Windows  a one-folder bundle, wrapped two ways. Inno Setup compiles it
+#            into an installer, and Compress-Archive zips it for anyone who
+#            would rather not run one. A folder is not something you can
+#            hand somebody through a download link.
+#   macOS    an application bundle. .app is already the unit Finder opens
+#            and the Dock shows, so it only needs zipping - with ditto,
+#            because upload-artifact does not preserve the executable bits
+#            or the symlinks inside a bundle and a zip that loses them is
+#            an app that will not start.
 #
 # The tag has to agree with appConfig.appVersion. That is checked rather than
 # trusted: a release named after a version the application does not report is
@@ -27,7 +39,11 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     env:
       # No display on a runner, and the suite skips the handful of checks
       # that need one rather than failing them.
@@ -53,9 +69,9 @@ jobs:
         run: python -m ruff check src tests tools
 
       # Only on a tag, and before anything is built: finding this out after a
-      # 118 MB build and a release has already been drafted is too late.
+      # build and a drafted release is too late.
       - name: Check the tag matches the version the app reports
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: startsWith(github.ref, 'refs/tags/v') && runner.os == 'Windows'
         run: |
           $reported = python -c "import sys; sys.path.insert(0, 'src'); from frwb import appConfig; print(appConfig.appVersion)"
           $tagged = "${{ github.ref_name }}".TrimStart("v")
@@ -68,7 +84,21 @@ jobs:
 
   build:
     needs: test
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifactName: frwbWindows
+            artifactPath: |
+              dist/frwbSetup-*.exe
+              dist/FRWB-*-portable.zip
+          - os: macos-latest
+            artifactName: frwbMacos
+            artifactPath: dist/FRWB-*-macos.zip
+
+    runs-on: ${{ matrix.os }}
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -84,12 +114,23 @@ jobs:
           python -m pip install ".[build]"
 
       # Builds the bundle, takes an inventory of what landed in it, then runs
-      # the built executable's own --selftest. A windowed build has no console
-      # to complain through, so asking it is the only proof it starts.
+      # the built application's own --selftest. A windowed build has no
+      # console to complain through, so asking it is the only proof it starts.
       - name: Build the standalone application
         run: python tools/buildExe.py
 
+      - name: Read the version the app reports
+        id: naming
+        shell: bash
+        run: |
+          version=$(python -c "import sys; sys.path.insert(0, 'src'); from frwb import appConfig; print(appConfig.appVersion)")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "version=$version"
+
+      # --- Windows: the installer and the portable folder ------------------
+
       - name: Ensure Inno Setup is available
+        if: runner.os == 'Windows'
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) {
@@ -99,32 +140,26 @@ jobs:
           else { Write-Output "Inno Setup is already here: $iscc" }
 
       - name: Build the installer
+        if: runner.os == 'Windows'
         run: python tools/buildInstaller.py
 
-      - name: Name the artifacts after the version
-        id: naming
-        run: |
-          $version = python -c "import sys; sys.path.insert(0, 'src'); from frwb import appConfig; print(appConfig.appVersion)"
-          "version=$version" >> $env:GITHUB_OUTPUT
-          Write-Output "version=$version"
-
-      # The portable half: the same bundle the installer carries, for anyone
-      # who would rather unzip a folder than run a setup program.
       - name: Zip the portable bundle
+        if: runner.os == 'Windows'
         run: Compress-Archive -Path dist/FRWB/* -DestinationPath "dist/FRWB-${{ steps.naming.outputs.version }}-portable.zip"
 
-      - name: Upload the installer
-        uses: actions/upload-artifact@v7
-        with:
-          name: frwbSetup
-          path: dist/frwbSetup-*.exe
-          if-no-files-found: error
+      # --- macOS: zip the .app with its permissions intact -----------------
 
-      - name: Upload the portable bundle
+      - name: Zip the application bundle
+        if: runner.os == 'macOS'
+        run: ditto -c -k --keepParent "dist/FRWB.app" "dist/FRWB-${{ steps.naming.outputs.version }}-macos.zip"
+
+      # ---------------------------------------------------------------------
+
+      - name: Upload the build
         uses: actions/upload-artifact@v7
         with:
-          name: frwbPortable
-          path: dist/FRWB-*-portable.zip
+          name: ${{ matrix.artifactName }}
+          path: ${{ matrix.artifactPath }}
           if-no-files-found: error
 
       # Small, and the first thing worth reading when a build starts on the
@@ -132,7 +167,7 @@ jobs:
       - name: Upload the self-test report
         uses: actions/upload-artifact@v7
         with:
-          name: frwbSelfTest
+          name: frwbSelfTest-${{ runner.os }}
           path: dist/selftest.txt
           if-no-files-found: warn
 
@@ -149,12 +184,12 @@ jobs:
         with:
           path: artifacts
 
-      - name: Create the release and attach the installer
+      - name: Create the release and attach the builds
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           tag="${{ github.ref_name }}"
-          files=(artifacts/frwbSetup/*.exe artifacts/frwbPortable/*.zip)
+          files=(artifacts/frwbWindows/*.exe artifacts/frwbWindows/*.zip artifacts/frwbMacos/*.zip)
           if gh release view "$tag" --repo "${{ github.repository }}" > /dev/null 2>&1; then
             gh release upload "$tag" "${files[@]}" --repo "${{ github.repository }}" --clobber
           else

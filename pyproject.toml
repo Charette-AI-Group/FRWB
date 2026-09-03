@@ -18,6 +18,9 @@ dev = [
 # of dev so a checkout that only runs the app and the tests stays smaller.
 build = [
     "pyinstaller>=6.16,<7",
+    # macOS only, and only at build time: PyInstaller renders the .icns the
+    # bundle needs from the 1024 px PNG through Pillow.
+    "pillow>=10,<12; sys_platform == 'darwin'",
 ]
 
 [project.scripts]

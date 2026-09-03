@@ -79,10 +79,10 @@ pytest
 ruff check src tests tools
 ```
 
-## Standalone build and installer
+## Standalone builds
 
-Users do not need Python. [Releases](https://github.com/Charette-AI-Group/FRWB/releases)
-carry a Windows installer and a portable zip, both built by
+Users do not need Python. [Releases](https://github.com/Charette-AI-Group/FRWB/releases) carry a
+Windows installer, a Windows portable zip and a macOS app bundle, all built by
 [`.github/workflows/build.yml`](.github/workflows/build.yml) and attached automatically when a
 version tag is pushed.
 
@@ -96,12 +96,26 @@ python tools\buildInstaller.py
 
 | Step | Produces | Notes |
 |------|----------|-------|
-| `tools\buildExe.py` | `dist\FRWB\` | One-folder PyInstaller bundle, about 118 MB. Takes an inventory of what landed in it, then runs the built executable's own `--selftest` |
-| `tools\buildInstaller.py` | `dist\frwbSetup-<version>.exe` | Inno Setup 6, about 34 MB. Per-user install, no administrator rights. Needs `winget install JRSoftware.InnoSetup` |
+| `tools/buildExe.py` on Windows | `dist\FRWB\` | One-folder PyInstaller bundle, about 118 MB |
+| `tools/buildExe.py` on macOS | `dist/FRWB.app` | Application bundle, from the same spec |
+| `tools\buildInstaller.py` | `dist\frwbSetup-<version>.exe` | Inno Setup 6, about 34 MB. Per-user install, no administrator rights. Needs `winget install JRSoftware.InnoSetup`. Windows only |
 
-The build is one folder rather than one file so it starts immediately, and because an installer
-wants a folder anyway. `FRWB.exe --selftest report.txt` asks a built copy whether it kept its
-icons and its manual, which is the only way a windowed build can answer: it has no console.
+The Windows build is one folder rather than one file so it starts immediately, and because an
+installer wants a folder anyway. Either way `--selftest report.txt` asks a built copy whether it
+kept its icons and its manual, which is the only way a windowed build can answer: it has no
+console. The build script refuses to call a bundle shippable until it does.
+
+### A note for macOS users
+
+The app bundle is **not code-signed or notarised**, so Gatekeeper will refuse it on first open
+with a message about an unidentified developer. Right-click the app and choose **Open**, which
+offers a button the plain double-click does not, or clear the quarantine flag:
+
+```bash
+xattr -dr com.apple.quarantine FRWB.app
+```
+
+Signing needs a paid Apple Developer account, which this project does not have.
 
 To publish a release, tag a commit whose `appConfig.appVersion` matches. The workflow refuses a
 tag that disagrees, because a release named after a version the app does not report leaves a bug
