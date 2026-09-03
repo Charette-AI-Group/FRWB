@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FRWB — Rename a Folder Full of Files, Safely</title>
+  <meta name="description"
+    content="FRWB renames every file in a folder from a pattern, showing you each new name before anything changes. Counters, dates, EXIF photo dates and undo. Free for Windows and macOS.">
+  <meta name="author" content="Charette AI Group">
+  <link rel="icon" href="img/icon.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <nav class="siteNav">
+    <div class="wrap">
+      <a class="brand" href="#top"><img src="img/icon.png" alt="">FRWB</a>
+      <div class="navLinks">
+        <a href="#purpose">Why</a>
+        <a href="#quickstart">Quick start</a>
+        <a href="#manual">Manual</a>
+        <a href="#safety">Safety</a>
+        <a class="btnSmall" href="#download">Download<span class="wideOnly"> FRWB</span></a>
+        <a class="btnSmall btnDonate" href="https://www.paypal.com/donate/?hosted_button_id=FEM4WLD7LHY36"
+          target="_blank" rel="noopener">Donate</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ------------------------------------------------------------ hero -->
+  <header class="hero" id="top">
+    <div class="wrap heroGrid">
+      <div class="heroText">
+        <img class="heroIcon" src="img/icon.png" alt="FRWB icon">
+        <h1>Rename a folder full of files, safely.</h1>
+        <p class="heroLead">The File Rename Processing Workbench shows you every new name
+          <em>before</em> a single file changes. Build the name from a pattern, watch the list on the
+          right update as you type, and rename only when nothing collides.</p>
+        <div class="btnRow">
+          <a class="btn btnPrimary" href="#download">Download free</a>
+          <a class="btn btnGhost" href="#manual">Read the manual</a>
+        </div>
+        <p class="fineprint">Version 0.9.0 &middot; Windows and macOS &middot; free and open source &middot;
+          works entirely on your own machine</p>
+      </div>
+      <div>
+        <img class="heroShot" src="img/mainWindow.png"
+          alt="The FRWB window: a folder of photos on the left, the names they would get on the right">
+      </div>
+    </div>
+  </header>
+
+  <!-- --------------------------------------------------------- purpose -->
+  <section class="band" id="purpose">
+    <div class="wrap">
+      <div class="bandHead">
+        <h2>Why not just rename them in Explorer?</h2>
+        <p>Selecting a hundred files and pressing F2 gives you <code>photo (1).jpg</code> through
+          <code>photo (100).jpg</code>. It cannot use the date a photo was taken, it cannot keep part of
+          the old name, and it cannot show you the result before it happens.</p>
+      </div>
+
+      <p style="max-width:780px">FRWB is built around the part Explorer leaves out: <strong>seeing what
+        you are about to do</strong>. The left panel is the folder as it is now. The right panel is the
+        same list of files under the name each one would get. Change anything above and the right panel
+        redraws immediately.</p>
+
+      <p style="max-width:780px">Nothing is written until you press <strong>Rename Files</strong>, and
+        that button stays greyed out while any two files would end up sharing a name. If the result is
+        not what you wanted, one menu item puts every file back.</p>
+
+      <h3>What people use it for</h3>
+      <div class="cards">
+        <div class="card">
+          <h3>Photos off a camera</h3>
+          <p><code>IMG_4821.JPG</code> tells you nothing. <code>Iceland_20250714_012.JPG</code> sorts by
+            date and says where you were.</p>
+        </div>
+        <div class="card">
+          <h3>Scans and downloads</h3>
+          <p>Strip the junk a scanner or a browser added, renumber the results from one, and pad the
+            numbers so they sort correctly.</p>
+        </div>
+        <div class="card">
+          <h3>Anything numbered wrong</h3>
+          <p>Files that sort as 1, 10, 11, 2 because nobody padded them. Renumber the whole set in one
+            pass, in the order you choose.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ------------------------------------------------------ quickstart -->
+  <section class="band alt" id="quickstart">
+    <div class="wrap">
+      <div class="bandHead">
+        <h2>Quick start</h2>
+        <p>Four steps, and you can stop at any of the first three without having changed anything.</p>
+      </div>
+
+      <ol class="steps">
+        <li><strong>Choose a folder.</strong> Press <em>Choose Folder…</em> and pick one. Its files
+          appear on the left.</li>
+        <li><strong>Build the new name.</strong> Click the token buttons, or pick a ready-made pattern
+          from <em>Presets</em>. The right panel updates as you go.</li>
+        <li><strong>Read the right panel.</strong> Red means two files would collide. Grey means nothing
+          would change. Anything else is what you are about to get.</li>
+        <li><strong>Press Rename Files.</strong> It turns teal once the batch can safely run. Not what
+          you wanted? <em>File &rsaquo; Undo Last Rename</em>.</li>
+      </ol>
+
+      <figure>
+        <img src="img/lists.png"
+          alt="The two panels side by side, with each original file name opposite the name it would get">
+        <figcaption>The two panels scroll and select together, so a row on the right is always the same
+          file as the row on the left.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- manual -->
+  <section class="band" id="manual">
+    <div class="wrap">
+      <div class="bandHead">
+        <h2>User manual</h2>
+        <p>Everything the application does, in the order you meet it.</p>
+      </div>
+
+      <div class="manualGrid">
+        <nav class="toc">
+          <strong>Contents</strong>
+          <ol>
+            <li><a href="#installing">Installing</a></li>
+            <li><a href="#choosing">Choosing a folder</a></li>
+            <li><a href="#pattern">Name Pattern</a></li>
+            <li><a href="#modifiers">Name Modifiers</a></li>
+            <li><a href="#number">Number In Name</a></li>
+            <li><a href="#counterdate">Counter and Date</a></li>
+            <li><a href="#preview">Reading the preview</a></li>
+            <li><a href="#renaming">Renaming and undo</a></li>
+            <li><a href="#appearance">Theme and manual</a></li>
+            <li><a href="#troubleshooting">Troubleshooting</a></li>
+          </ol>
+        </nav>
+
+        <div class="manualBody">
+
+          <section id="installing">
+            <h2>1. Installing</h2>
+            <p><strong>Windows.</strong> Run <code>frwbSetup-0.9.0.exe</code>. It installs for your user
+              account only, so there is no administrator prompt and nothing lands in
+              <code>Program Files</code>. If you would rather not install anything, take the portable
+              zip instead, unpack it anywhere and run <code>FRWB.exe</code> from the folder.</p>
+            <p><strong>macOS.</strong> Unzip and drag <code>FRWB.app</code> to Applications.</p>
+            <div class="note">
+              <p><strong>macOS will refuse it the first time.</strong> The app is not code-signed, which
+                needs a paid Apple Developer account this project does not have. Right-click the app and
+                choose <strong>Open</strong> — that dialog has a button the plain double-click does not.
+                Or clear the flag from a terminal: <code>xattr -dr com.apple.quarantine FRWB.app</code>.</p>
+            </div>
+            <p>Your settings live in your own user folder and are remembered between sessions: the last
+              folder, the filter, the sort order and every naming setting.</p>
+          </section>
+
+          <section id="choosing">
+            <h2>2. Choosing a folder</h2>
+            <p>Press <strong>Choose Folder…</strong> (or <kbd>Ctrl</kbd>+<kbd>O</kbd>). Only the files
+              directly in that folder are listed; subfolders are not searched.</p>
+            <ul>
+              <li><strong>Filter</strong> narrows the list. <code>*.jpg; *.png</code> keeps only those.
+                Press <kbd>Enter</kbd> to apply it.</li>
+              <li><strong>Sort By</strong> sets the order of the list, which is also the order the
+                counter counts in. <em>Name</em> uses natural order, so <code>file2</code> comes before
+                <code>file10</code>. You can also sort by created date, modified date, or the date a
+                photo was taken.</li>
+              <li><strong>Check boxes</strong> leave a file out. <em>All</em> and <em>None</em> tick or
+                untick everything. An unticked file keeps its name and does not consume a counter value.</li>
+              <li><strong>Double-click any row</strong>, in either panel, to open that file in whatever
+                application your system uses for it, exactly as the file manager does.</li>
+            </ul>
+            <p>Press <kbd>F5</kbd> if the folder changed behind the application's back.</p>
+          </section>
+
+          <section id="pattern">
+            <h2>3. Name Pattern</h2>
+            <p>The pattern is the new name, without its extension. Anything you type is kept exactly as
+              typed, and anything in braces is replaced for each file.</p>
+
+            <figure>
+              <img src="img/namePattern.png"
+                alt="The Name Pattern box: a pattern field, a Presets button, and a row of token buttons with ticks">
+              <figcaption>A button per token. Each wears a tick while its token is in the pattern, so the
+                row tells you what the new name is made of.</figcaption>
+            </figure>
+
+            <div class="tableScroll">
+              <table>
+                <thead>
+                  <tr><th>Token</th><th>Becomes</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>{name}</code></td><td>The original name, after the <em>Number In Name</em> and <em>Find</em> steps</td></tr>
+                  <tr><td><code>{n}</code></td><td>The counter</td></tr>
+                  <tr><td><code>{date}</code></td><td>The date from the <em>Date</em> box, in its format</td></tr>
+                  <tr><td><code>{created}</code></td><td>The file's created date</td></tr>
+                  <tr><td><code>{modified}</code></td><td>The file's modified date</td></tr>
+                  <tr><td><code>{taken}</code></td><td>The photo's EXIF date, falling back to the modified date</td></tr>
+                  <tr><td><code>{parent}</code></td><td>The name of the folder</td></tr>
+                  <tr><td><code>{ext}</code></td><td>The original extension, without its dot</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p>Clicking a token button inserts it at the cursor. The buttons <strong>insert rather than
+              switch</strong>, which matters more than it sounds: a pattern is ordered and can hold text
+              of your own. <code>{name}_{n}</code> and <code>{n}_{name}</code> are different results from
+              the same two tokens, and <code>Holiday_{n}</code> puts a word you chose in front of every
+              file. Neither survives being reduced to eight on-off switches.</p>
+
+            <p><strong>Presets</strong> offers ready-made patterns such as <code>{name}_{n}</code> or
+              <code>{date}_{n}</code>. Picking one fills the field and the ticks follow. A token you
+              misspell is left as typed, so you see it in the preview instead of losing it.</p>
+          </section>
+
+          <section id="modifiers">
+            <h2>4. Name Modifiers</h2>
+            <p>Changes made to the text itself, on either side of the pattern.</p>
+            <ul>
+              <li><strong>Find</strong> and <strong>Replace With</strong> work on the original name
+                <em>before</em> the pattern reads it, which is why <code>{name}</code> picks up the
+                result. Leave <em>Replace With</em> empty to delete the text.</li>
+              <li><strong>Name Case</strong> applies to the finished name: keep, lower, UPPER or Title
+                Case.</li>
+              <li><strong>Extension</strong> changes the case of the extension only. The extension itself
+                is always kept.</li>
+            </ul>
+          </section>
+
+          <section id="number">
+            <h2>5. Number In Name</h2>
+            <p>Cameras and downloads number things: <code>IMG_0042.jpg</code>, <code>Scan 12.pdf</code>.
+              This box says what happens to that number.</p>
+            <div class="tableScroll">
+              <table>
+                <thead>
+                  <tr><th>Existing Number</th><th>Result for <code>IMG_0042</code></th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Keep</td><td><code>IMG_0042</code></td></tr>
+                  <tr><td>Replace With Counter</td><td><code>IMG_001</code>, <code>IMG_002</code>, … in list order</td></tr>
+                  <tr><td>Replace With Date</td><td><code>IMG_20240102_030405</code></td></tr>
+                  <tr><td>Remove</td><td><code>IMG</code>, taking the separator with it</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p><strong>Which One</strong> picks the last or the first number when a name holds several,
+              as in <code>2024_pic_07</code>.</p>
+          </section>
+
+          <section id="counterdate">
+            <h2>6. Counter and Date</h2>
+            <p><strong>Counter</strong> has a start, a step and a number of digits, so 3 digits gives
+              <code>001</code>. It runs in the order of the list and skips unticked files. The step can be
+              negative to count down, and it steps straight over zero, which would hand every file the
+              same name.</p>
+            <p><strong>Date</strong> takes its <em>Source</em> from the file's created date, its modified
+              date, the photo's EXIF date, or a custom date and time you pick. The <em>Format</em> uses
+              the usual <code>strftime</code> codes: <code>%Y</code> year, <code>%m</code> month,
+              <code>%d</code> day, <code>%H</code> hour, <code>%M</code> minute, <code>%S</code> second.</p>
+
+            <figure>
+              <img src="img/controlsGreyed.png"
+                alt="The controls with the Counter and Date boxes greyed out because the pattern uses neither">
+              <figcaption>Both boxes grey out when nothing in the name would use them, so the controls
+                that matter are the ones you can reach.</figcaption>
+            </figure>
+
+            <p>The greying happens in stages, because these are not one switch:</p>
+            <div class="tableScroll">
+              <table>
+                <thead><tr><th>Control</th><th>Live when</th></tr></thead>
+                <tbody>
+                  <tr><td>The three counter controls</td><td><code>{n}</code> is in the pattern, or <em>Existing Number</em> is <em>Replace With Counter</em></td></tr>
+                  <tr><td>Date <em>Format</em></td><td>any date token is in the pattern, or <em>Existing Number</em> is <em>Replace With Date</em>. Every date token is printed through it</td></tr>
+                  <tr><td>Date <em>Source</em></td><td><code>{date}</code> is in the pattern, or <em>Existing Number</em> is <em>Replace With Date</em>. The other date tokens name their own date, so there is nothing for <em>Source</em> to pick</td></tr>
+                  <tr><td>Date <em>Custom</em></td><td><em>Source</em> is live and set to <em>Custom Date/Time</em></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>So a pattern of <code>{created}</code> leaves <em>Format</em> live and greys <em>Source</em>:
+              you can change how the date is printed, but not which date it is.</p>
+          </section>
+
+          <section id="preview">
+            <h2>7. Reading the preview</h2>
+            <p>The right panel is colour-coded, and the line under the two lists counts each kind.</p>
+            <div class="tableScroll">
+              <table>
+                <thead><tr><th>Colour</th><th>Meaning</th></tr></thead>
+                <tbody>
+                  <tr><td><span class="swatch swatchRenamed"></span>Normal</td><td>Will be renamed</td></tr>
+                  <tr><td><span class="swatch swatchUnchanged"></span>Grey</td><td>Unchanged, or unticked</td></tr>
+                  <tr><td><span class="swatch swatchConflict"></span>Red</td><td><strong>Conflict.</strong> Two files would get the same name, or the name is already taken in the folder</td></tr>
+                  <tr><td><span class="swatch swatchInvalid"></span>Orange</td><td><strong>Invalid.</strong> An empty name, or one the system reserves</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <figure>
+              <img src="img/conflicts.png"
+                alt="Every new name shown in red because the pattern would give all nine files the same name">
+              <figcaption>A pattern with no counter would give every file one name. All nine are flagged,
+                and Rename Files stays greyed out.</figcaption>
+            </figure>
+
+            <p>Hover any name for the reason. <strong>Rename Files</strong> stays disabled while a single
+              conflict or invalid name remains, and takes colour the moment the batch can run.</p>
+          </section>
+
+          <section id="renaming">
+            <h2>8. Renaming and undo</h2>
+            <p>Press <strong>Rename Files</strong> (<kbd>Ctrl</kbd>+<kbd>R</kbd>) and confirm. The work
+              happens off the interface thread, so the window stays responsive on a large folder.</p>
+            <p>Renaming runs in <strong>two phases</strong>: every file first moves to a temporary name,
+              then to its final one. That is what lets a batch swap two names, or renumber a series in
+              place, without one rename overwriting a file the next one still needs. A file that
+              unexpectedly cannot be renamed is reported and put back, never replaced.</p>
+            <p><strong>File &rsaquo; Undo Last Rename</strong> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>)
+              returns every file in the last batch to its previous name. Only the most recent batch is
+              kept.</p>
+          </section>
+
+          <section id="appearance">
+            <h2>9. Theme and manual</h2>
+            <p><strong>Help &rsaquo; Theme</strong> chooses light, dark, or whatever your system is set
+              to, which is the default. Every icon in the application is drawn twice so it reads on
+              either.</p>
+            <figure>
+              <img src="img/mainWindowLight.png" alt="The same FRWB window on a light theme">
+              <figcaption>The same window on a light theme.</figcaption>
+            </figure>
+            <p><strong>Help &rsaquo; User Manual</strong> (<kbd>F1</kbd>) opens
+              <a href="https://github.com/Charette-AI-Group/FRWB/blob/main/docs/manual/README.md">this
+              manual on GitHub</a>, and falls back to the copy inside the application when there is no
+              network.</p>
+          </section>
+
+          <section id="troubleshooting">
+            <h2>10. Troubleshooting</h2>
+            <h4>Rename Files is greyed out</h4>
+            <p>Something in the right panel is red or orange, or no name would actually change. Hover the
+              button for the reason it gives.</p>
+
+            <h4>The counter or date boxes are greyed out</h4>
+            <p>Nothing in the new name uses them. Add <code>{n}</code> or a date token to the pattern, or
+              set <em>Existing Number</em> to replace with one. See
+              <a href="#counterdate">Counter and Date</a>.</p>
+
+            <h4>A photo has no EXIF date</h4>
+            <p>FRWB reads the date from JPEG and TIFF headers. Other formats, including HEIC and camera
+              raw files, fall back to the file's modified date, and the preview says so when you hover
+              the name.</p>
+
+            <h4>Some files were not renamed</h4>
+            <p>A dialog lists each one and why. The usual cause is a file open in another application.
+              Close it and press <kbd>F5</kbd>, then rename again.</p>
+
+            <h4>I renamed the wrong thing</h4>
+            <p><strong>File &rsaquo; Undo Last Rename</strong>, as long as you have not run a second
+              batch over the top.</p>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- safety -->
+  <section class="band alt" id="safety">
+    <div class="wrap">
+      <div class="bandHead">
+        <h2>What it will not do to your files</h2>
+        <p>A renaming tool is trusted with a whole folder at once, so it is worth being explicit about
+          the limits it works inside.</p>
+      </div>
+      <div class="cards">
+        <div class="card">
+          <h3>Never overwrites</h3>
+          <p>A file unexpectedly in the way is reported and the rename is rolled back, on every
+            platform. It is never silently replaced.</p>
+        </div>
+        <div class="card">
+          <h3>Never renames blind</h3>
+          <p>The preview is produced by the same code that performs the rename, so what you read is what
+            happens.</p>
+        </div>
+        <div class="card">
+          <h3>Never leaves the machine</h3>
+          <p>No account, no telemetry, no network. The only request it ever makes is checking whether
+            the online manual is reachable, when you press F1.</p>
+        </div>
+        <div class="card">
+          <h3>Only the folder you chose</h3>
+          <p>Subfolders are not touched, and neither is anything you unticked.</p>
+        </div>
+        <div class="card">
+          <h3>Undo for the last batch</h3>
+          <p>Every applied rename is recorded so the whole batch can be put back in one step.</p>
+        </div>
+        <div class="card">
+          <h3>Open source</h3>
+          <p>MIT licensed, and the <a href="https://github.com/Charette-AI-Group/FRWB">full source</a>
+            is public, so anyone can check what it does with their files.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- -------------------------------------------------------- download -->
+  <section class="band" id="download">
+    <div class="wrap">
+      <div class="bandHead">
+        <h2>Download FRWB 0.9.0</h2>
+        <p>Free, no account, no ads, no telemetry. You do not need Python or anything else installed.</p>
+      </div>
+
+      <div class="downloadGrid">
+        <div class="downloadCard">
+          <h3>Windows installer</h3>
+          <p>About 33&nbsp;MB. Installs for your user only, so there is no administrator prompt. Adds a
+            Start menu entry and an optional desktop shortcut.</p>
+          <a class="btn btnPrimary" href="https://github.com/Charette-AI-Group/FRWB/releases/latest">
+            Download for Windows</a>
+        </div>
+        <div class="downloadCard">
+          <h3>Windows portable</h3>
+          <p>About 48&nbsp;MB zipped. Nothing is installed: unpack it anywhere, including a USB stick,
+            and run <code>FRWB.exe</code>.</p>
+          <a class="btn btnGhost" href="https://github.com/Charette-AI-Group/FRWB/releases/latest">
+            Portable zip</a>
+        </div>
+        <div class="downloadCard">
+          <h3>macOS</h3>
+          <p>About 37&nbsp;MB zipped. Unzip and move <code>FRWB.app</code> to Applications. See the
+            <a href="#installing">note about Gatekeeper</a> before the first run.</p>
+          <a class="btn btnGhost" href="https://github.com/Charette-AI-Group/FRWB/releases/latest">
+            Download for macOS</a>
+        </div>
+      </div>
+
+      <p class="fineprint">Every link opens the GitHub release page — scroll to <strong>Assets</strong>
+        and pick the file for your system. Each build is produced by a
+        <a href="https://github.com/Charette-AI-Group/FRWB/blob/main/.github/workflows/build.yml">public
+        workflow</a> straight from the source, and checks itself before it is published.</p>
+    </div>
+  </section>
+
+  <footer class="siteFooter">
+    <div class="wrap">
+      <div>&copy; 2026 Charette AI Group, LLC &middot; FRWB 0.9.0 &middot; MIT licensed</div>
+      <div>
+        <a href="https://github.com/Charette-AI-Group/FRWB">Source</a> &middot;
+        <a href="https://github.com/Charette-AI-Group/FRWB/releases/latest">Releases</a> &middot;
+        <a href="https://charette-ai-group.github.io/web/">More from Charette AI Group</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+
+</html>

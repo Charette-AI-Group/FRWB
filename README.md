@@ -31,6 +31,9 @@ before anything touches the disk. Built with PySide6.
   Rename** puts the last batch back.
 - The folder, filter, sort and every rename setting are remembered between sessions.
 
+**Website:** <https://charette-ai-group.github.io/FRWB/> — screenshots, the full manual and the
+downloads, built from [`docs/`](docs/).
+
 See [`docs/manual/README.md`](docs/manual/README.md) for the user manual (also under
 **Help > User Manual**, F1).
 
