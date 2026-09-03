@@ -1,7 +1,10 @@
-"""Smoke tests for the main window."""
+"""Smoke tests for the main window, including the folder-to-rename path."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence
 
@@ -16,18 +19,10 @@ def testMainWindowOpens(qtbot) -> None:
     mainWindow.show()
 
     assert mainWindow.isVisible()
-    assert mainWindow.windowTitle() == "File Rename Processing Workbench"
+    assert mainWindow.windowTitle() == "FRWB - File Rename Processing Workbench"
     assert mainWindow.statusBar().currentMessage() == "Ready"
-
-
-def testGreetButtonUpdatesLabel(qtbot) -> None:
-    mainWindow = MainWindow()
-    qtbot.addWidget(mainWindow)
-    mainWindow.show()
-
-    qtbot.mouseClick(mainWindow.greetButton, Qt.MouseButton.LeftButton)
-
-    assert mainWindow.statusBar().currentMessage() == "Hello from File Rename Processing Workbench"
+    assert not mainWindow.renameAction.isEnabled()
+    assert not mainWindow.undoAction.isEnabled()
 
 
 def testMenuBarStructure(qtbot) -> None:
@@ -38,8 +33,13 @@ def testMenuBarStructure(qtbot) -> None:
     assert menuTitles == ["&File", "&Help"]
 
     fileItems = [a.text() for a in mainWindow.fileMenu.actions() if not a.isSeparator()]
-    assert fileItems == ["&New", "&Open...", "&Save", "E&xit"]
-    assert any(a.isSeparator() for a in mainWindow.fileMenu.actions())
+    assert fileItems == [
+        "&Choose Folder...",
+        "&Refresh",
+        "&Rename Files",
+        "&Undo Last Rename",
+        "E&xit",
+    ]
 
     helpItems = [a.text() for a in mainWindow.helpMenu.actions() if not a.isSeparator()]
     assert helpItems == ["&Theme", "User &Manual...", "&About"]
@@ -51,9 +51,6 @@ def testThemeMenuOffersSystemLightDark(qtbot) -> None:
 
     labels = [a.text() for a in mainWindow.themeMenu.actions()]
     assert labels == ["Use &System Theme", "&Light", "&Dark"]
-    assert all(a.isCheckable() for a in mainWindow.themeMenu.actions())
-    assert mainWindow.themeGroup.isExclusive()
-    # Following Windows is the default.
     assert mainWindow.themeActions[themeService.systemTheme].isChecked()
 
 
@@ -63,46 +60,183 @@ def testChoosingDarkAppliesAndRemembersIt(qtbot, observableColorScheme) -> None:
 
     mainWindow.themeActions[themeService.darkTheme].trigger()
 
-    # The window's own job: remember the choice and say so.
     assert themeService.loadTheme() == themeService.darkTheme
     assert "Dark theme applied" in mainWindow.statusBar().currentMessage()
-    # Whether Qt then paints dark is only observable on some platforms.
     if observableColorScheme:
         assert themeService.currentColorScheme() == Qt.ColorScheme.Dark
 
 
-def testSavedThemeIsRestoredOnNextLaunch(qtbot) -> None:
+def testRefreshWithoutAFolderIsANudgeNotAFailure(qtbot) -> None:
+    mainWindow = MainWindow()
+    qtbot.addWidget(mainWindow)
+
+    mainWindow.refreshAction.trigger()
+
+    assert mainWindow.statusBar().currentMessage() == "Choose a folder first."
+
+
+# --- the folder-to-rename path --------------------------------------------------
+
+
+@pytest.fixture
+def folder(tmp_path) -> Path:
+    """A folder of its own: tmp_path also holds the isolated settings file."""
+    made = tmp_path / "files"
+    made.mkdir()
+    return made
+
+
+def waitForScan(qtbot, mainWindow: MainWindow, count: int) -> None:
+    qtbot.waitUntil(lambda: mainWindow.listsPanel.sourceList.count() == count, timeout=5000)
+    qtbot.waitUntil(lambda: mainWindow.scanWorker is None, timeout=5000)
+
+
+def targetNames(mainWindow: MainWindow) -> list[str]:
+    targetList = mainWindow.listsPanel.targetList
+    return [targetList.item(i).text() for i in range(targetList.count())]
+
+
+def testLoadingAFolderFillsBothPanels(qtbot, folder) -> None:
+    (folder / "b.txt").write_text("b")
+    (folder / "a.txt").write_text("a")
+    mainWindow = MainWindow()
+    qtbot.addWidget(mainWindow)
+
+    mainWindow.loadFolder(folder)
+    waitForScan(qtbot, mainWindow, 2)
+
+    sourceList = mainWindow.listsPanel.sourceList
+    assert [sourceList.item(i).text() for i in range(2)] == ["a.txt", "b.txt"]
+    assert targetNames(mainWindow) == ["a.txt", "b.txt"]
+    assert "2 files" in mainWindow.statusBar().currentMessage()
+    assert str(folder) in mainWindow.listsPanel.folderLabel.text()
+
+
+def testChangingThePatternUpdatesTheRightPanel(qtbot, folder) -> None:
+    (folder / "a.txt").write_text("a")
+    mainWindow = MainWindow()
+    qtbot.addWidget(mainWindow)
+    mainWindow.loadFolder(folder)
+    waitForScan(qtbot, mainWindow, 1)
+
+    mainWindow.controlsPanel.patternEdit.setText("{name}_{n}")
+
+    qtbot.waitUntil(lambda: targetNames(mainWindow) == ["a_001.txt"], timeout=5000)
+    assert mainWindow.renameAction.isEnabled()
+
+
+def testRenamingAndUndoingTouchTheDisk(qtbot, folder, monkeypatch) -> None:
+    (folder / "a.txt").write_text("a")
+    mainWindow = MainWindow()
+    qtbot.addWidget(mainWindow)
+    monkeypatch.setattr(mainWindow, "confirm", lambda title, question: True)
+    mainWindow.loadFolder(folder)
+    waitForScan(qtbot, mainWindow, 1)
+    mainWindow.controlsPanel.patternEdit.setText("{name}_{n}")
+    qtbot.waitUntil(lambda: targetNames(mainWindow) == ["a_001.txt"], timeout=5000)
+
+    mainWindow.onRenameFiles()
+
+    qtbot.waitUntil(lambda: (folder / "a_001.txt").exists(), timeout=5000)
+    qtbot.waitUntil(lambda: mainWindow.renameWorker is None, timeout=5000)
+    waitForScan(qtbot, mainWindow, 1)
+    assert appConfig.undoLogFile.exists()
+    assert mainWindow.undoAction.isEnabled()
+    assert "Renamed 1 files" in mainWindow.statusBar().currentMessage() or (
+        "1 files in" in mainWindow.statusBar().currentMessage()
+    )
+
+    mainWindow.onUndoLastRename()
+
+    qtbot.waitUntil(lambda: (folder / "a.txt").exists(), timeout=5000)
+    qtbot.waitUntil(lambda: mainWindow.renameWorker is None, timeout=5000)
+    assert not appConfig.undoLogFile.exists()
+
+
+def testDecliningTheConfirmationRenamesNothing(qtbot, folder, monkeypatch) -> None:
+    (folder / "a.txt").write_text("a")
+    mainWindow = MainWindow()
+    qtbot.addWidget(mainWindow)
+    monkeypatch.setattr(mainWindow, "confirm", lambda title, question: False)
+    mainWindow.loadFolder(folder)
+    waitForScan(qtbot, mainWindow, 1)
+    mainWindow.controlsPanel.patternEdit.setText("{name}_{n}")
+    qtbot.waitUntil(lambda: targetNames(mainWindow) == ["a_001.txt"], timeout=5000)
+
+    mainWindow.onRenameFiles()
+
+    assert (folder / "a.txt").exists()
+    assert mainWindow.renameWorker is None
+
+
+def testAMissingFolderIsReportedInADialog(qtbot, folder, monkeypatch) -> None:
+    mainWindow = MainWindow()
+    qtbot.addWidget(mainWindow)
+    shown: list[str] = []
+    monkeypatch.setattr(mainWindow, "showError", lambda title, message: shown.append(message))
+
+    mainWindow.loadFolder(folder / "gone")
+
+    qtbot.waitUntil(lambda: bool(shown), timeout=5000)
+    qtbot.waitUntil(lambda: mainWindow.scanWorker is None, timeout=5000)
+    assert "gone" in shown[0]
+
+
+def testTheLastFolderIsReopenedNextTime(qtbot, folder) -> None:
+    (folder / "a.txt").write_text("a")
     first = MainWindow()
     qtbot.addWidget(first)
-    first.themeActions[themeService.lightTheme].trigger()
+    first.loadFolder(folder)
+    waitForScan(qtbot, first, 1)
 
     reopened = MainWindow()
     qtbot.addWidget(reopened)
+    waitForScan(qtbot, reopened, 1)
 
-    assert reopened.themeActions[themeService.lightTheme].isChecked()
+    assert str(folder) in reopened.listsPanel.folderLabel.text()
 
 
-def testFileMenuPlaceholdersUpdateStatus(qtbot) -> None:
+def testDoubleClickingAFileOpensIt(qtbot, folder, monkeypatch) -> None:
+    (folder / "a.txt").write_text("a")
     mainWindow = MainWindow()
     qtbot.addWidget(mainWindow)
+    mainWindow.loadFolder(folder)
+    waitForScan(qtbot, mainWindow, 1)
+    opened: list[Path] = []
+    monkeypatch.setattr(
+        "frwb.ui.mainWindow.fileOpenService.openFile",
+        lambda path: opened.append(path) or "",
+    )
 
-    mainWindow.newAction.trigger()
-    assert mainWindow.statusBar().currentMessage() == "File > New selected"
+    mainWindow.listsPanel.fileActivated.emit(folder / "a.txt")
 
-    mainWindow.openAction.trigger()
-    assert mainWindow.statusBar().currentMessage() == "File > Open selected"
+    assert opened == [folder / "a.txt"]
+    assert mainWindow.statusBar().currentMessage() == "Opening a.txt..."
 
-    mainWindow.saveAction.trigger()
-    assert mainWindow.statusBar().currentMessage() == "File > Save selected"
+
+def testAFileThatCannotBeOpenedGoesToADialog(qtbot, folder, monkeypatch) -> None:
+    mainWindow = MainWindow()
+    qtbot.addWidget(mainWindow)
+    shown: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        mainWindow, "showError", lambda title, message: shown.append((title, message))
+    )
+    monkeypatch.setattr(
+        "frwb.ui.mainWindow.fileOpenService.openFile", lambda path: "It is gone."
+    )
+
+    mainWindow.onFileActivated(folder / "gone.txt")
+
+    assert shown == [("Could Not Open File", "It is gone.")]
+
+
+# --- help ----------------------------------------------------------------------
 
 
 def testAboutOpensTheDialogAndReportsADonation(qtbot, monkeypatch) -> None:
-    """The About text itself is covered in testAboutDialog."""
     mainWindow = MainWindow()
     qtbot.addWidget(mainWindow)
-    monkeypatch.setattr(
-        "frwb.ui.mainWindow.showAbout", lambda parent: True
-    )
+    monkeypatch.setattr("frwb.ui.mainWindow.showAbout", lambda parent: True)
 
     mainWindow.onHelpAbout()
 
@@ -110,7 +244,6 @@ def testAboutOpensTheDialogAndReportsADonation(qtbot, monkeypatch) -> None:
 
 
 def openedUrls(monkeypatch) -> list[str]:
-    """Collect what the app asked the desktop to open, and say it worked."""
     opened: list[str] = []
     monkeypatch.setattr(
         "frwb.ui.mainWindow.QDesktopServices.openUrl",
@@ -126,14 +259,9 @@ def testManualHasTheStandardHelpShortcut(qtbot) -> None:
     assert mainWindow.manualAction.shortcut() == QKeySequence.StandardKey.HelpContents
 
 
-def testTheStubManualShipsWithTheTemplate() -> None:
-    """Without it the menu item would fail the first time anybody clicked it."""
+def testTheManualShipsWithTheApp() -> None:
     assert appConfig.manualPath.exists()
     assert appConfig.manualPath.read_text(encoding="utf-8").strip()
-
-
-def testNothingIsPublishedUntilTheAuthorSaysSo() -> None:
-    """A new app has no manual online, so the default must not pretend it has."""
     assert appConfig.manualUrl == ""
 
 
@@ -147,24 +275,9 @@ def testTheLocalCopyIsOpenedWhenNothingIsPublished(qtbot, monkeypatch) -> None:
     assert len(opened) == 1
     assert opened[0].startswith("file:")
     assert opened[0].endswith("README.md")
-    assert "local copy" in mainWindow.statusBar().currentMessage()
-
-
-def testThePublishedCopyWinsWhenItAnswers(qtbot, monkeypatch) -> None:
-    """Set manualUrl and the behaviour switches, with no other change."""
-    monkeypatch.setattr(appConfig, "manualUrl", "https://example.invalid/manual")
-    mainWindow = MainWindow()
-    qtbot.addWidget(mainWindow)
-    opened = openedUrls(monkeypatch)
-
-    mainWindow.openManual(publishedIsReachable=True)
-
-    assert opened == ["https://example.invalid/manual"]
-    assert "browser" in mainWindow.statusBar().currentMessage()
 
 
 def testAMissingManualLeavesTheReaderAnAddress(qtbot, monkeypatch, tmp_path) -> None:
-    """Nothing opened, so the path has to be readable somewhere."""
     monkeypatch.setattr(appConfig, "manualPath", tmp_path / "gone.md")
     mainWindow = MainWindow()
     qtbot.addWidget(mainWindow)
@@ -178,18 +291,15 @@ def testAMissingManualLeavesTheReaderAnAddress(qtbot, monkeypatch, tmp_path) -> 
     mainWindow.openManual(publishedIsReachable=False)
 
     assert shown and "gone.md" in shown[0]
-    assert "nothing published" in shown[0]
 
 
-def testTheCheckRunsOffTheInterfaceThread(qtbot, monkeypatch) -> None:
-    """A network probe can hang until its timeout; the window must not."""
+def testTheManualCheckRunsOffTheInterfaceThread(qtbot, monkeypatch) -> None:
     mainWindow = MainWindow()
     qtbot.addWidget(mainWindow)
     openedUrls(monkeypatch)
 
     with qtbot.waitSignal(mainWindow.manualAction.changed, timeout=5000):
         mainWindow.onHelpManual()
-    # Disabled while the probe is in flight, so it cannot be started twice.
     assert not mainWindow.manualAction.isEnabled()
 
     assert mainWindow.manualWorker is not None

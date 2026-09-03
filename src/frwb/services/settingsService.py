@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from PySide6.QtCore import QSettings
 
 from frwb import appConfig
@@ -12,7 +14,12 @@ def openSettings() -> QSettings:
 
 
 def writeValue(key: str, value: object) -> None:
+    writeValues({key: value})
+
+
+def writeValues(values: Mapping[str, object]) -> None:
     appConfig.settingsFile.parent.mkdir(parents=True, exist_ok=True)
     settings = openSettings()
-    settings.setValue(key, value)
+    for key, value in values.items():
+        settings.setValue(key, value)
     settings.sync()
