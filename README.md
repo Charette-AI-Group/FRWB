@@ -157,6 +157,7 @@ The rename feature, by file:
 | `ui/appIcons.py` | Load the icons, in the ink the current theme needs |
 | `ui/mainWindow.py` | Menus, wiring, workers |
 | `tools/makeIcons.py` | Draw the icon set (not imported by the app) |
+| `tools/recordTraffic.py` | Snapshot the GitHub traffic numbers, which GitHub keeps for 14 days |
 
 See `AGENTS.md` for architecture and naming conventions (for you and AI agents).
 

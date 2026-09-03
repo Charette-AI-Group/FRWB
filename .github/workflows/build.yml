@@ -35,6 +35,9 @@ on:
       - "**.md"
       - "docs/**"
       - ".screenshots/**"
+      # The traffic workflow commits here every Monday. Without this, a row
+      # of visitor counts would cost a full Windows and macOS build.
+      - "traffic/**"
   workflow_dispatch:
 
 jobs:
