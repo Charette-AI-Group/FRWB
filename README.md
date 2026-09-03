@@ -111,5 +111,9 @@ The rename feature, by file:
 
 See `AGENTS.md` for architecture and naming conventions (for you and AI agents).
 
+## License
+
+MIT, see [`LICENSE`](LICENSE). © 2026 Charette AI Group, LLC.
+
 ---
 *Created from the Qt App Template.*

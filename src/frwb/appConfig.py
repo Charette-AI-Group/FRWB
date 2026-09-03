@@ -67,11 +67,12 @@ def actionIconFile(key: str, onDark: bool) -> Path | None:
 # Help > User Manual. The copy in the checkout is what a new app has, and it is
 # enough: the menu item works from the first run rather than being a promise.
 manualPath = projectRoot / "docs" / "manual" / "README.md"
-# Publishing is opt-in. Set this once the manual is pushed somewhere that
-# renders markdown and the published copy becomes the preferred one, with the
-# local copy as the offline fallback. Left empty no network request is made.
-#     manualUrl = f"{repoUrl}/blob/main/docs/manual/README.md"
-manualUrl = ""
+# Published now that the repository is public. GitHub renders the markdown
+# and the screenshots with it, which a local .md opened in an editor does
+# not, so the published copy is the preferred one. The local copy in the
+# checkout stays as the offline fallback, and the app asks whether this
+# address answers before sending anyone to it.
+manualUrl = f"{repoUrl}/blob/main/docs/manual/README.md"
 # How long to wait for the published copy before falling back to the local one.
 manualTimeoutSeconds = 3.0
 

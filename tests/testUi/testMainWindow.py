@@ -260,9 +260,23 @@ def testManualHasTheStandardHelpShortcut(qtbot) -> None:
 
 
 def testTheManualShipsWithTheApp() -> None:
+    """The local copy is the offline fallback, so it has to be real."""
     assert appConfig.manualPath.exists()
     assert appConfig.manualPath.read_text(encoding="utf-8").strip()
-    assert appConfig.manualUrl == ""
+
+
+def testThePublishedManualIsPointedAtTheFileThatExists() -> None:
+    """A published address that 404s costs a wait and then the wrong answer.
+
+    Checked by construction rather than over the network: the suite must not
+    need a connection, and what can go wrong here is the path drifting from
+    manualPath, not GitHub going away.
+    """
+    assert appConfig.manualUrl.startswith(appConfig.repoUrl)
+    assert appConfig.manualUrl.endswith("/docs/manual/README.md")
+
+    relative = appConfig.manualPath.relative_to(appConfig.projectRoot).as_posix()
+    assert appConfig.manualUrl.endswith(f"/{relative}"), "the two copies have drifted apart"
 
 
 def testTheLocalCopyIsOpenedWhenNothingIsPublished(qtbot, monkeypatch) -> None:
