@@ -267,6 +267,11 @@ th { font-weight: 650; background: var(--bg-alt); }
 
 @media (max-width: 860px) { .downloadGrid { grid-template-columns: 1fr; } }
 
+/* ---------------------------------------------------------- donate ----- */
+
+.donate { max-width: 760px; }
+.donate h2 { margin-bottom: .6em; }
+
 /* ---------------------------------------------------------- footer ----- */
 
 .siteFooter { padding: 32px 0; color: var(--text-muted); font-size: .9rem; }
