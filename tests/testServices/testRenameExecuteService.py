@@ -50,15 +50,45 @@ def testSwappingTwoNamesLosesNothing(tmp_path) -> None:
 
 
 def testAFileInTheWayIsReportedAndNothingIsOverwritten(tmp_path) -> None:
+    """The one that has to hold on every platform.
+
+    Path.rename refuses to clobber on Windows and silently replaces on POSIX,
+    so before renameWithoutOverwriting this passed on Windows while destroying
+    b.txt on macOS. The rename service exists to be safe; this is the test
+    that says so.
+    """
     (tmp_path / "a.txt").write_text("A")
     (tmp_path / "b.txt").write_text("B")
 
     result = service.executeRenames([op(tmp_path, "a.txt", "b.txt")])
 
-    assert (tmp_path / "b.txt").read_text() == "B"
+    assert (tmp_path / "b.txt").read_text() == "B", "the file in the way survived"
     assert (tmp_path / "a.txt").read_text() == "A", "the source goes back to its own name"
     assert result.applied == []
     assert len(result.failed) == 1 and "a.txt" in result.failed[0]
+
+
+def testRenamingOntoAnExistingFileRefusesRatherThanReplacing(tmp_path) -> None:
+    """The guard on its own, away from the two-phase machinery around it."""
+    (tmp_path / "keep.txt").write_text("keep")
+    (tmp_path / "move.txt").write_text("move")
+
+    try:
+        service.renameWithoutOverwriting(tmp_path / "move.txt", tmp_path / "keep.txt")
+    except FileExistsError:
+        assert (tmp_path / "keep.txt").read_text() == "keep"
+        assert (tmp_path / "move.txt").read_text() == "move"
+        return
+    raise AssertionError("it replaced a file that was already there")
+
+
+def testRenamingOntoAFreeNameStillWorks(tmp_path) -> None:
+    (tmp_path / "move.txt").write_text("move")
+
+    service.renameWithoutOverwriting(tmp_path / "move.txt", tmp_path / "moved.txt")
+
+    assert (tmp_path / "moved.txt").read_text() == "move"
+    assert not (tmp_path / "move.txt").exists()
 
 
 def testAMissingSourceIsReportedAndTheRestStillHappens(tmp_path) -> None:

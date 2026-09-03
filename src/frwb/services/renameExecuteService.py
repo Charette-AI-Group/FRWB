@@ -7,6 +7,7 @@ one rename overwriting a file the next still needs.
 
 from __future__ import annotations
 
+import errno
 import json
 import logging
 import uuid
@@ -40,18 +41,36 @@ def tempNameFor(path: Path) -> Path:
     return path.with_name(f"{tempPrefix}{uuid.uuid4().hex[:8]}-{path.name}")
 
 
+def renameWithoutOverwriting(source: Path, target: Path) -> None:
+    """Rename, refusing to replace a file that is already sitting there.
+
+    Path.rename does that by itself on Windows and *silently overwrites* on
+    POSIX, so the safety net this service is built on existed on one platform
+    and not the other: the same batch that reported a collision on Windows
+    destroyed the file in the way on macOS. The check closes that gap.
+
+    Not atomic, and it does not need to be. The window is microseconds on a
+    tool one person drives a folder at a time, the conflicting names were
+    already refused at preview, and the POSIX alternative that is atomic -
+    link then unlink - fails across filesystems and on some of them entirely.
+    """
+    if target.exists():
+        raise FileExistsError(errno.EEXIST, "File exists", str(target))
+    source.rename(target)
+
+
 def executeRenames(operations: list[RenameOperation]) -> RenameResult:
     """Rename every file, reporting each one that could not be.
 
-    Path.rename refuses to overwrite on Windows, which is the safety net: a
-    file that is unexpectedly in the way is reported, never replaced.
+    A file unexpectedly in the way is reported, never replaced, on every
+    platform - see renameWithoutOverwriting for why that takes saying.
     """
     result = RenameResult()
     staged: list[tuple[Path, RenameOperation]] = []
     for operation in operations:
         temp = tempNameFor(operation.source)
         try:
-            operation.source.rename(temp)
+            renameWithoutOverwriting(operation.source, temp)
         except OSError as exc:
             result.failed.append(f"{operation.source.name}: {exc.strerror or exc}")
             continue
@@ -59,7 +78,7 @@ def executeRenames(operations: list[RenameOperation]) -> RenameResult:
 
     for temp, operation in staged:
         try:
-            temp.rename(operation.target)
+            renameWithoutOverwriting(temp, operation.target)
         except OSError as exc:
             result.failed.append(f"{operation.source.name}: {exc.strerror or exc}")
             restore(temp, operation.source, result)
