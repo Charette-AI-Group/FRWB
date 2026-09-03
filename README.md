@@ -125,7 +125,7 @@ tag that disagrees, because a release named after a version the app does not rep
 report unanswerable.
 
 ```powershell
-git tag -a v0.9.0 -m "First public beta" ; git push origin v0.9.0
+git tag -a v1.0.0 -m "What changed in this release" ; git push origin v1.0.0
 ```
 
 ## Structure

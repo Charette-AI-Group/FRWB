@@ -8,7 +8,7 @@ from pathlib import Path
 
 appName = "File Rename Processing Workbench"
 appShortName = "FRWB"
-appVersion = "0.9.0"
+appVersion = "1.0.0"
 organizationName = "Charette-AI-Group"
 
 # Help > About contents

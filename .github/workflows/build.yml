@@ -5,7 +5,7 @@
 # publishes a GitHub Release with them attached, because release assets never
 # expire and workflow artifacts do:
 #
-#     git tag -a v0.9.0 -m "..." && git push origin v0.9.0
+#     git tag -a v1.0.0 -m "What changed" && git push origin v1.0.0
 #
 # What each platform produces, and why they differ:
 #
@@ -179,6 +179,12 @@ jobs:
       contents: write
 
     steps:
+      # Only for the tag's own message, which becomes the release notes.
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
       - name: Download the build artifacts
         uses: actions/download-artifact@v8
         with:
@@ -190,8 +196,23 @@ jobs:
         run: |
           tag="${{ github.ref_name }}"
           files=(artifacts/frwbWindows/*.exe artifacts/frwbWindows/*.zip artifacts/frwbMacos/*.zip)
+
+          # An annotated tag carries what the person cutting the release
+          # actually wrote. --generate-notes lists merged pull requests, and
+          # on a repository that does not use them it produces a release body
+          # holding one link and nothing else - which is what v0.9.0 got.
+          notes=$(git tag -l --format='%(contents:body)' "$tag")
+          if [ -z "$(echo "$notes" | tr -d '[:space:]')" ]; then
+            notes=$(git tag -l --format='%(contents)' "$tag")
+          fi
+
           if gh release view "$tag" --repo "${{ github.repository }}" > /dev/null 2>&1; then
             gh release upload "$tag" "${files[@]}" --repo "${{ github.repository }}" --clobber
+          elif [ -n "$(echo "$notes" | tr -d '[:space:]')" ]; then
+            gh release create "$tag" "${files[@]}" \
+              --repo "${{ github.repository }}" \
+              --title "FRWB ${tag#v}" \
+              --notes "$notes"
           else
             gh release create "$tag" "${files[@]}" \
               --repo "${{ github.repository }}" \
