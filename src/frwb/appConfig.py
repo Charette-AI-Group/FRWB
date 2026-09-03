@@ -15,7 +15,7 @@ organizationName = "Charette-AI-Group"
 editorName = "Francois Charette, PhD"
 aiAgentName = "Claude - Fable 5.1"
 copyrightHolder = "Charette AI Group, LLC"
-repoUrl = "https://github.com/Charette-AI-Group/frwb"
+repoUrl = "https://github.com/Charette-AI-Group/FRWB"
 
 # Donate button, shared across the Charette AI Group applications so they look
 # like they come from the same place.
