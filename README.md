@@ -76,7 +76,39 @@ Or just double-click **`runApp.cmd`** in the project folder (needs the one-time 
 
 ```powershell
 pytest
-ruff check src tests
+ruff check src tests tools
+```
+
+## Standalone build and installer
+
+Users do not need Python. [Releases](https://github.com/Charette-AI-Group/FRWB/releases)
+carry a Windows installer and a portable zip, both built by
+[`.github/workflows/build.yml`](.github/workflows/build.yml) and attached automatically when a
+version tag is pushed.
+
+To build them yourself:
+
+```powershell
+pip install -e ".[build]"
+python tools\buildExe.py
+python tools\buildInstaller.py
+```
+
+| Step | Produces | Notes |
+|------|----------|-------|
+| `tools\buildExe.py` | `dist\FRWB\` | One-folder PyInstaller bundle, about 118 MB. Takes an inventory of what landed in it, then runs the built executable's own `--selftest` |
+| `tools\buildInstaller.py` | `dist\frwbSetup-<version>.exe` | Inno Setup 6, about 34 MB. Per-user install, no administrator rights. Needs `winget install JRSoftware.InnoSetup` |
+
+The build is one folder rather than one file so it starts immediately, and because an installer
+wants a folder anyway. `FRWB.exe --selftest report.txt` asks a built copy whether it kept its
+icons and its manual, which is the only way a windowed build can answer: it has no console.
+
+To publish a release, tag a commit whose `appConfig.appVersion` matches. The workflow refuses a
+tag that disagrees, because a release named after a version the app does not report leaves a bug
+report unanswerable.
+
+```powershell
+git tag -a v0.9.0 -m "First public beta" ; git push origin v0.9.0
 ```
 
 ## Structure

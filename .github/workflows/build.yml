@@ -1,0 +1,165 @@
+# Builds the standalone application and its installer, and publishes them.
+#
+# Every push runs the tests and produces both, downloadable from the run's
+# "Artifacts" section. Pushing a version tag additionally publishes a GitHub
+# Release with them attached, because release assets never expire and workflow
+# artifacts do:
+#
+#     git tag -a v0.9.0 -m "..." && git push origin v0.9.0
+#
+# The tag has to agree with appConfig.appVersion. That is checked rather than
+# trusted: a release named after a version the application does not report is
+# worse than no release, because the bug report that follows is unanswerable.
+
+name: build
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "v*"
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".screenshots/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: windows-latest
+    env:
+      # No display on a runner, and the suite skips the handful of checks
+      # that need one rather than failing them.
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install the app and its dev dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Run tests
+        run: python -m pytest -q
+
+      - name: Lint
+        run: python -m ruff check src tests tools
+
+      # Only on a tag, and before anything is built: finding this out after a
+      # 118 MB build and a release has already been drafted is too late.
+      - name: Check the tag matches the version the app reports
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          $reported = python -c "import sys; sys.path.insert(0, 'src'); from frwb import appConfig; print(appConfig.appVersion)"
+          $tagged = "${{ github.ref_name }}".TrimStart("v")
+          Write-Output "appConfig.appVersion = $reported"
+          Write-Output "tag                  = $tagged"
+          if ($reported -ne $tagged) {
+            Write-Output "::error::Tag $tagged does not match appConfig.appVersion $reported"
+            exit 1
+          }
+
+  build:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+
+      - name: Install the app and its build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[build]"
+
+      # Builds the bundle, takes an inventory of what landed in it, then runs
+      # the built executable's own --selftest. A windowed build has no console
+      # to complain through, so asking it is the only proof it starts.
+      - name: Build the standalone application
+        run: python tools/buildExe.py
+
+      - name: Ensure Inno Setup is available
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            Write-Output "Inno Setup not on the image; installing it."
+            choco install innosetup --no-progress -y
+          }
+          else { Write-Output "Inno Setup is already here: $iscc" }
+
+      - name: Build the installer
+        run: python tools/buildInstaller.py
+
+      - name: Name the artifacts after the version
+        id: naming
+        run: |
+          $version = python -c "import sys; sys.path.insert(0, 'src'); from frwb import appConfig; print(appConfig.appVersion)"
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Output "version=$version"
+
+      # The portable half: the same bundle the installer carries, for anyone
+      # who would rather unzip a folder than run a setup program.
+      - name: Zip the portable bundle
+        run: Compress-Archive -Path dist/FRWB/* -DestinationPath "dist/FRWB-${{ steps.naming.outputs.version }}-portable.zip"
+
+      - name: Upload the installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: frwbSetup
+          path: dist/frwbSetup-*.exe
+          if-no-files-found: error
+
+      - name: Upload the portable bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: frwbPortable
+          path: dist/FRWB-*-portable.zip
+          if-no-files-found: error
+
+      # Small, and the first thing worth reading when a build starts on the
+      # runner but not on somebody's machine.
+      - name: Upload the self-test report
+        uses: actions/upload-artifact@v7
+        with:
+          name: frwbSelfTest
+          path: dist/selftest.txt
+          if-no-files-found: warn
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download the build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Create the release and attach the installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${{ github.ref_name }}"
+          files=(artifacts/frwbSetup/*.exe artifacts/frwbPortable/*.zip)
+          if gh release view "$tag" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            gh release upload "$tag" "${files[@]}" --repo "${{ github.repository }}" --clobber
+          else
+            gh release create "$tag" "${files[@]}" \
+              --repo "${{ github.repository }}" \
+              --title "FRWB ${tag#v}" \
+              --generate-notes
+          fi

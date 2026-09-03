@@ -13,6 +13,15 @@ from frwb.ui.mainWindow import MainWindow
 
 
 def main() -> int:
+    # A packaged build has no console to print to, so the check that says
+    # whether it is intact has to be reachable from the outside.
+    if "--selftest" in sys.argv:
+        from frwb.selftest import runSelfTest
+
+        index = sys.argv.index("--selftest")
+        reportPath = sys.argv[index + 1] if len(sys.argv) > index + 1 else None
+        return runSelfTest(reportPath)
+
     # Before the QApplication: Windows reads the identity when the first
     # window appears, and by then a late call has already been missed.
     taskbarService.applyTaskbarIdentity()

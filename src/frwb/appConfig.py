@@ -29,8 +29,12 @@ projectRoot = Path(__file__).resolve().parents[2]
 # In a bundled build the package lives inside an archive rather than on disk,
 # so bundled files come from the extraction directory instead. Getting this
 # wrong is the classic "works from source, no icon in the .exe" bug.
-if getattr(sys, "frozen", False):
-    resourcesDir = Path(getattr(sys, "_MEIPASS", projectRoot)) / "resources"
+isFrozen = bool(getattr(sys, "frozen", False))
+# What everything bundled hangs off: the extraction directory when frozen,
+# the checkout when not.
+bundleRoot = Path(getattr(sys, "_MEIPASS", projectRoot)) if isFrozen else projectRoot
+if isFrozen:
+    resourcesDir = bundleRoot / "frwb" / "resources"
 else:
     resourcesDir = Path(__file__).resolve().parent / "resources"
 
@@ -64,9 +68,11 @@ def actionIconFile(key: str, onDark: bool) -> Path | None:
     path = resourcesDir / f"{key}-{'onDark' if onDark else 'onLight'}.ico"
     return path if path.is_file() else None
 
-# Help > User Manual. The copy in the checkout is what a new app has, and it is
-# enough: the menu item works from the first run rather than being a promise.
-manualPath = projectRoot / "docs" / "manual" / "README.md"
+# Help > User Manual, the offline fallback. Rooted at the bundle when frozen
+# and at the checkout otherwise, for the same reason resourcesDir is: a built
+# app has no source tree above it, and projectRoot would climb out of the
+# bundle into whatever folder the installer happened to use.
+manualPath = bundleRoot / "docs" / "manual" / "README.md"
 # Published now that the repository is public. GitHub renders the markdown
 # and the screenshots with it, which a local .md opened in an editor does
 # not, so the published copy is the preferred one. The local copy in the
