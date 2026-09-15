@@ -128,6 +128,14 @@ report unanswerable.
 git tag -a v1.0.0 -m "What changed in this release" ; git push origin v1.0.0
 ```
 
+The tag's message becomes the release notes. `git tag` deletes lines starting with `#` by
+default, so if the notes use Markdown headings, write them to a file and tag with
+`--cleanup=whitespace` instead:
+
+```powershell
+git tag -a v1.0.1 --cleanup=whitespace -F notes.md ; git push origin v1.0.1
+```
+
 ## Structure
 
 | Layer | Folder | Purpose |
