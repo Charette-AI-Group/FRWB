@@ -7,6 +7,12 @@
 #
 #     git tag -a v1.0.0 -m "What changed" && git push origin v1.0.0
 #
+# The annotated tag's message becomes the release notes (see the release
+# job). git tag deletes lines starting with "#" by default, so for Markdown
+# headings in the notes, tag from a file with --cleanup=whitespace instead:
+#
+#     git tag -a v1.0.1 --cleanup=whitespace -F notes.md && git push origin v1.0.1
+#
 # What each platform produces, and why they differ:
 #
 #   Windows  a one-folder bundle, wrapped two ways. Inno Setup compiles it
