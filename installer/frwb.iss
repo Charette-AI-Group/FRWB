@@ -78,7 +78,12 @@ Type: filesandordirs; Name: "{app}\_internal"
 [Code]
 { A running copy holds its own files open, so replacing them mid-upgrade
   fails with a message about a file in use that says nothing about why. Ask
-  first instead, in words that name the application. }
+  first instead, in words that name the application. The main window's title
+  is exactly "FRWB - File Rename Processing Workbench" (appConfig.windowTitle).
+
+  SuppressibleMsgBox, not MsgBox: a plain MsgBox still appears under
+  /SUPPRESSMSGBOXES and would hang a silent install. Silently, the answer is
+  No - abort cleanly rather than fail halfway on a file in use. }
 function InitializeSetup(): Boolean;
 var
   WindowHandle: HWND;
@@ -86,9 +91,9 @@ begin
   Result := True;
   WindowHandle := FindWindowByWindowName('{#ShortName} - {#AppName}');
   if WindowHandle <> 0 then
-    Result := MsgBox(
+    Result := SuppressibleMsgBox(
       '{#ShortName} appears to be running.' + #13#10#13#10 +
       'Close it before continuing, or setup cannot replace its files.' + #13#10#13#10 +
       'Continue anyway?',
-      mbConfirmation, MB_YESNO) = IDYES;
+      mbConfirmation, MB_YESNO, IDNO) = IDYES;
 end;
